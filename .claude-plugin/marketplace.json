@@ -1,0 +1,13 @@
+{
+  "name": "claude-worker-relay",
+  "owner": {
+    "name": "openshane"
+  },
+  "plugins": [
+    {
+      "name": "worker-relay",
+      "source": "./plugins/worker-relay",
+      "description": "Delegate local coding tasks to Codex or consult Gemini from Claude Code."
+    }
+  ]
+}

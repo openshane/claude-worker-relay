@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+source "$script_dir/request.sh"
+parse_request "$@"
+
+args=(exec)
+if [[ -n $session_id ]]; then
+    args+=(resume)
+fi
+args+=(--json -c 'sandbox_mode="workspace-write"' -c 'approval_policy="never"')
+if [[ -n $session_id ]]; then
+    args+=("$session_id")
+fi
+
+reply=$(printf '%s' "$prompt" | codex "${args[@]}" - |
+    node "$script_dir/protocol.mjs" codex "$session_id")
+printf '%s\n' "$reply"

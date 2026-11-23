@@ -1,0 +1,5 @@
+{
+  "name": "worker-relay",
+  "version": "0.1.0",
+  "description": "Ask Gemini or delegate a task to Codex from Claude Code, then continue the same worker session."
+}
