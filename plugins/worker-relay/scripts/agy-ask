@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+source "$script_dir/request.sh"
+parse_request "$@"
+
+args=(--mode plan --input-format stream-json --output-format stream-json)
+if [[ -n $session_id ]]; then
+    args+=(--conversation "$session_id")
+fi
+
+reply=$(printf '%s' "$prompt" | node "$script_dir/protocol.mjs" agy-input |
+    agy "${args[@]}" | node "$script_dir/protocol.mjs" agy "$session_id")
+printf '%s\n' "$reply"
