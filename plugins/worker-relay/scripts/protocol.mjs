@@ -9,7 +9,14 @@ async function readReply(provider, requestedId) {
     const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
     for await (const line of lines) {
         if (!line.trim()) continue;
-        const event = JSON.parse(line);
+        let event;
+        try {
+            event = JSON.parse(line);
+        } catch {
+            // A stray log line must not discard a long-running turn.
+            console.error(`${provider}: ignored non-JSON output: ${line.slice(0, 200)}`);
+            continue;
+        }
         if (provider === 'agy') {
             if (event.event !== 'result') continue;
             const result = event.result;

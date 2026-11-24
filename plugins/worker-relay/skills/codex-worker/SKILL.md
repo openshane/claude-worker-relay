@@ -11,7 +11,7 @@ git worktree add -b codex/<topic> "../<repo>-codex-<topic>" HEAD
 
 Uncommitted changes in the project do not reach the new worktree; if the task depends on them, ask the user how to carry them over. An investigation may run in the project itself: tell Codex which files or behavior to inspect and to leave the files unchanged, and compare `git status --short` afterwards.
 
-Include the requested outcome, scope of permitted changes and verification criteria in the prompt. The worker can write only inside its directory. The script ignores the user's Codex configuration, so set `CODEX_WORKER_MODEL` or `CODEX_WORKER_EFFORT` (default `xhigh`) in the command when the user asks for a particular model or effort.
+Codex sees only the prompt and its directory, so state the requested outcome, the interface to keep, the scope of permitted changes, other places that must change with it, and the verification criteria. The worker can write only inside its directory and has no network access: install dependencies before delegating, and run network-dependent tests, commits and pushes yourself. The script ignores the user's Codex configuration, so set `CODEX_WORKER_MODEL` or `CODEX_WORKER_EFFORT` (default `xhigh`) in the command when the user asks for a particular model or effort.
 
 Start the script with the Bash tool's `run_in_background` set to true, because Codex tasks often outlast the foreground timeout. Use a single-quoted heredoc delimiter that does not occur in the prompt so that the shell preserves its contents.
 

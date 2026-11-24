@@ -6,7 +6,8 @@ parse_request() {
             echo '--resume requires the session_id from a previous reply' >&2
             return 2
         fi
-        session_id=$2
+        # The CLIs report lowercase IDs, which the reply check compares exactly.
+        session_id=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
         shift 2
     fi
     if [[ $# != 2 || -z $1 ]]; then

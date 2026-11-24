@@ -2,13 +2,68 @@
 set -euo pipefail
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$script_dir/request.sh"
+copy=
+if [[ ${1:-} == --copy ]]; then
+    copy=1
+    shift
+fi
 parse_request "$@"
+
+rules='Inspect the workspace as needed, but do not create, modify or delete any file and do not run commands that change state. Reply in the language of the request, using these sections:'
+if [[ -n $copy ]]; then
+    preamble="You are reviewing user-facing copy and interaction. $rules
+1. Copy changes: the current text, the proposed text and the reason for each
+2. Interaction issues
+3. Points to confirm: anything you are unsure of; never promise behaviour the product may not have"
+else
+    preamble="You are giving an independent second opinion. $rules
+1. Conclusion
+2. Evidence: the files and lines you inspected
+3. Risks and open questions, separating what you verified from what you assume"
+fi
+
+# Plan mode does not stop file writes in headless runs (google-antigravity/antigravity-cli#1181),
+# so record the work tree as a Git tree, using a scratch index to leave the real one untouched.
+snapshot() {
+    local dir
+    dir=$(mktemp -d) || return 1
+    cp -- "$(git rev-parse --git-path index)" "$dir/index" 2>/dev/null || true
+    GIT_INDEX_FILE=$dir/index git add -A -- :/ 2>/dev/null &&
+        GIT_INDEX_FILE=$dir/index git write-tree
+    local status=$?
+    rm -rf -- "$dir"
+    return "$status"
+}
+before=
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    before=$(snapshot) || before=
+fi
+if [[ -z $before ]]; then
+    echo 'agy-ask: file changes by Gemini cannot be detected outside a Git work tree' >&2
+fi
 
 args=(--mode plan --input-format stream-json --output-format stream-json)
 if [[ -n $session_id ]]; then
     args+=(--conversation "$session_id")
 fi
 
-reply=$(printf '%s' "$prompt" | node "$script_dir/protocol.mjs" agy-input |
-    agy "${args[@]}" | node "$script_dir/protocol.mjs" agy "$session_id")
-printf '%s\n' "$reply"
+status=0
+reply=$(printf '%s\n\nRequest:\n%s' "$preamble" "$prompt" | node "$script_dir/protocol.mjs" agy-input |
+    agy "${args[@]}" | node "$script_dir/protocol.mjs" agy "$session_id") || status=$?
+
+if [[ -n $before ]]; then
+    after=$(snapshot) || after=
+    if [[ -z $after ]]; then
+        echo 'agy-ask: could not check the work tree for changes' >&2
+    elif [[ $after != "$before" ]]; then
+        echo 'agy-ask: Gemini changed these files despite the read-only instruction:' >&2
+        git diff --no-renames --name-status "$before" "$after" >&2
+        changed=1
+    fi
+fi
+if (( status == 0 )); then
+    printf '%s\n' "$reply"
+    # Keep the reply but make the unexpected changes impossible to miss.
+    if [[ -n ${changed:-} ]]; then status=3; fi
+fi
+exit "$status"
