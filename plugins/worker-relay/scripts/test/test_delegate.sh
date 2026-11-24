@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 agent_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-test_root=$(mktemp -d)
+export test_root=$(mktemp -d)
 mkdir "$test_root/work tree"
 trap 'rm -rf -- "$test_root"' EXIT
 export test_cwd=$(cd "$test_root/work tree" && pwd -P)
@@ -14,6 +14,7 @@ export test_prompt=$'任务 "quotes" $HOME ; `echo literal`\nsecond line\n'
 
 # Exercise the public Bash commands with the same stdin/stdout protocol as each CLI.
 agy() {
+    [[ $test_mode != invalid ]] || { : > "$test_root/called"; return 9; }
     [[ $(pwd -P) == "$test_cwd" ]] || return 9
     local expected=(--mode plan --input-format stream-json --output-format stream-json)
     if [[ $test_mode == resume ]]; then expected+=(--conversation "$test_id"); fi
@@ -40,6 +41,7 @@ agy() {
     [[ $test_mode != bad_exit ]]
 }
 codex() {
+    [[ $test_mode != invalid ]] || { : > "$test_root/called"; return 9; }
     [[ $(pwd -P) == "$test_cwd" ]] || return 9
     local expected=(exec)
     if [[ $test_mode == resume ]]; then expected+=(resume); fi
@@ -117,5 +119,14 @@ for entry in agy-ask codex-worker; do
         grep -q $'^M\texisting.txt$' "$test_root/err" || fail 'agy-ask did not list the modified file'
         rm -- "$test_cwd/hacked.txt"
     fi
+    # Invalid requests exit with 2 before any CLI starts.
+    test_mode=invalid
+    for request in '--resume|nope|.|task' '--resume' '.' "$test_root/missing|task" $'.|  \n\t' '.|-'; do
+        IFS='|' read -r -a args <<< "$request"
+        status=0
+        response=$(bash "$agent_dir/$entry" "${args[@]}" 2>/dev/null < /dev/null) || status=$?
+        (( status == 2 )) && [[ -z $response && ! -e $test_root/called ]] ||
+            fail "$entry accepted invalid request [$request] (exit $status)"
+    done
     printf 'PASS %s\n' "$entry"
 done

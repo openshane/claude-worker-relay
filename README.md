@@ -58,4 +58,4 @@ bash plugins/worker-relay/scripts/codex-worker --resume "<session_id>" "/path/to
 bash plugins/worker-relay/scripts/test/test_delegate.sh
 ```
 
-离线测试覆盖两种 CLI 的首次调用、用大写 ID 续接、非 JSON 输出行、回复中断、服务失败和非零退出，以及 Gemini 的 `--copy` 模式和改动文件检测。Codex 已在 Windows 上通过真实账号验证两轮对话和沙箱。Gemini 的输入输出格式已与官方 headless 文档核对，但尚未用真实的 `agy` 运行过。
+离线测试覆盖两种 CLI 的首次调用、用大写 ID 续接、非 JSON 输出行、回复中断、服务失败和非零退出，Gemini 的 `--copy` 模式和改动文件检测，以及非法会话 ID、缺少参数、目录不存在和空任务等参数错误。Codex 已在 Windows 上通过真实账号验证两轮对话和沙箱。Gemini 的输入输出格式已与官方 headless 文档核对，但尚未用真实的 `agy` 运行过。

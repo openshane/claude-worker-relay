@@ -14,7 +14,10 @@ parse_request() {
         echo "Usage: bash ${0##*/} [--resume SESSION_ID] DIRECTORY 'TASK'  (use - to read TASK from stdin)" >&2
         return 2
     fi
-    cd -- "$1"
+    if ! cd -- "$1" 2>/dev/null; then
+        echo "Cannot enter directory: $1" >&2
+        return 2
+    fi
     prompt=$2
     if [[ $prompt == - ]]; then
         # Read through EOF, retaining quotes and trailing newlines.
