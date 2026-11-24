@@ -8,7 +8,17 @@ args=(exec)
 if [[ -n $session_id ]]; then
     args+=(resume)
 fi
-args+=(--json -c 'sandbox_mode="workspace-write"' -c 'approval_policy="never"')
+# MCP servers, plugins, hooks and account apps run outside the shell sandbox, so leave them out:
+# skip ~/.codex/config.toml and disable the features that load tools independently of it.
+args+=(--json --ignore-user-config --disable apps --disable plugins --disable remote_plugin
+    -c 'sandbox_mode="workspace-write"' -c 'approval_policy="never"'
+    -c "model_reasoning_effort=\"${CODEX_WORKER_EFFORT:-xhigh}\"")
+if [[ -n ${CODEX_WORKER_MODEL:-} ]]; then
+    args+=(-m "$CODEX_WORKER_MODEL")
+fi
+if [[ $OSTYPE == msys* || $OSTYPE == cygwin* ]]; then
+    args+=(-c 'windows.sandbox="elevated"')
+fi
 if [[ -n $session_id ]]; then
     args+=("$session_id")
 fi

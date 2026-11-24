@@ -21,6 +21,8 @@ async function readReply(provider, requestedId) {
             switch (event.type) {
                 case 'thread.started':
                     sessionId = event.thread_id;
+                    // Report the ID before the turn ends so that a stopped run can be resumed.
+                    console.error(`codex: session_id ${sessionId}`);
                     break;
                 case 'item.completed':
                     if (event.item.type === 'agent_message') reply = event.item.text;

@@ -17,9 +17,9 @@ Claude Code 终端版可依次执行以下命令：
 运行环境需要 Bash 和 Node.js 18 或以上。Windows 使用 Git Bash。使用哪个入口，就安装并登录对应的 CLI：
 
 - **Gemini** 使用 Google Antigravity CLI（`agy`）。先运行 `agy` 登录并选择可用的 Gemini 模型。插件用规划模式启动它。
-- **Codex** 使用 OpenAI Codex CLI（`codex`）。通过 `codex login` 登录，在受信任的 Git 工作目录中使用。插件启用 `workspace-write` 沙箱并关闭交互式提权，调查任务可在指令里明确要求只分析。
+- **Codex** 使用 OpenAI Codex CLI（`codex`）。通过 `codex login` 登录，在 Git 工作目录中使用。插件启用 `workspace-write` 沙箱并关闭交互式提权，调查任务可在指令里明确要求只分析。MCP 服务器、插件、钩子和 ChatGPT 账号连接的应用都不受 shell 沙箱约束，所以插件不加载 `~/.codex/config.toml`，同时关闭 `apps`、`plugins` 和 `remote_plugin` 这三个 feature。推理强度默认为 `xhigh`，模型使用 Codex 默认值，可分别用环境变量 `CODEX_WORKER_EFFORT` 和 `CODEX_WORKER_MODEL` 指定。在 Windows 上，插件使用 `elevated` 沙箱，需要先在 Codex 中完成该沙箱的设置。
 
-委派时，任务和所选工作目录内被读取的相关代码会由对应 CLI 在你的账号下处理。模型和用量设置沿用本地 CLI。
+委派时，任务和所选工作目录内被读取的相关代码会由对应 CLI 在你的账号下处理。Gemini 的模型和用量设置沿用本地 CLI。
 
 ## 在 Claude 中使用
 
@@ -28,7 +28,10 @@ Claude Code 终端版可依次执行以下命令：
 /worker-relay:codex-worker 修复导入器遇到空行时报错的问题，只修改导入器和对应测试。
 ```
 
-需要接着问时，可以告诉 Claude “沿用刚才的 Gemini 会话，指出对应的测试文件”。默认前台等待。要求后台运行时，Claude 使用 Bash 的后台任务功能。Bash 的任务 ID 用于取回本次输出，提供方的 `session_id` 用于续接对话。
+需要接着问时，可以告诉 Claude “沿用刚才的 Gemini 会话，指出对应的测试文件”。Bash 的任务 ID 用于取回本次输出，提供方的 `session_id` 用于续接对话。
+
+- Gemini 默认在前台等待，要求后台运行时，Claude 使用 Bash 的后台任务功能。
+- Codex 任务常常超过 Bash 前台超时，因此默认在后台运行。会改动文件的任务，Claude 会先用 `git worktree add` 从当前提交建一个独立工作树，交给 Codex 在其中修改，避免两边同时改同一份代码。Codex 返回后，Claude 检查该工作树的差异并运行验证。合并分支和删除工作树由你决定。
 
 ## 单独运行脚本
 
@@ -46,7 +49,7 @@ bash plugins/worker-relay/scripts/codex-worker --resume "<session_id>" "/path/to
 {"session_id":"01234567-1234-4321-abcd-0123456789ab","reply":"本轮回答"}
 ```
 
-错误写入 stderr 并返回非零退出码。多行任务可用 `-` 替代最后一个参数，从 stdin 传入。
+错误写入 stderr 并返回非零退出码。Codex 会话一开始，脚本就向 stderr 写入 `codex: session_id <id>`，因此即使运行中断，也能用 `--resume` 续接。多行任务可用 `-` 替代最后一个参数，从 stdin 传入。
 
 ## 验证
 
